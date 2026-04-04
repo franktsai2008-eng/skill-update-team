@@ -1,0 +1,16 @@
+# Scorer: Stack Relevance
+---
+name: relevance
+description: 根據與現有技術棧的相關性評分
+weight: 0.30
+enabled: true
+
+scoring_rules: |
+  評估工具與使用者現有技術棧的相關性（0-1）：
+  - 直接增強已安裝 MCP 的能力: 1.0（例如：Supabase 的 migration tool 增強現有 Supabase MCP）
+  - 填補現有能力空缺: 0.8（例如：目前沒有 Docker MCP，但使用者有 Docker 環境）
+  - 帶來全新能力: 0.6（例如：AI image generation MCP）
+  - 與現有 MCP 功能重疊 > 50%: 0.2（降級）
+  - 與使用者技術棧完全無關: 0.1
+
+  使用者的技術棧上下文會從 config.yaml 的 installed_mcps 注入。

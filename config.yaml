@@ -1,0 +1,22 @@
+# Skill Update Team — Configuration
+# Clone 後複製為 config.local.yaml 自訂個人設定
+
+# ── Claude CLI ──────────────────────────────
+claude:
+  model: sonnet                    # Research Agent 用 sonnet（省錢）
+  max_budget_usd: 0.50             # 單次掃描上限
+  output_format: json
+
+# ── Plugin 目錄（相對於 SUT_HOME，主程式自動掃描）──
+plugins:
+  sources_dir: sources
+  scorers_dir: scorers
+  actions_dir: actions
+
+# ── 評分門檻 ─────────────────────────────────
+scoring:
+  urgency_thresholds:
+    critical: 0.85       # 強烈建議
+    important: 0.65      # 建議安裝（會主動問你）
+    nice_to_have: 0.40   # 可考慮
+    watch: 0.0           # 持續觀察

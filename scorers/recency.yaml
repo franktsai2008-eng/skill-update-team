@@ -1,0 +1,15 @@
+# Scorer: Recency
+---
+name: recency
+description: 根據最後更新時間評分
+weight: 0.20
+enabled: true
+
+scoring_rules: |
+  根據最近一次 commit/更新時間給分（0-1）：
+  - 7 天內: 1.0
+  - 30 天內: 0.7
+  - 90 天內: 0.4
+  - 180 天內: 0.2
+  - > 180 天: 0.1
+  活躍維護的專案優先。超過 6 個月沒更新的專案降級處理。

@@ -1,0 +1,22 @@
+# Action Handler: pip 安裝
+---
+name: pip-install
+description: 透過 pip install 安裝 Python 工具
+type: library
+enabled: true
+
+match:
+  finding_type: library
+  install_method: pip
+
+snapshot_files:
+  - /dev/null  # pip 的 rollback 用 pip uninstall
+
+install_template: |
+  pip3 install {package}
+
+smoke_test: |
+  python3 -c "import {name}"
+
+rollback: |
+  pip3 uninstall -y {package}

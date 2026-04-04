@@ -1,0 +1,24 @@
+# Source Adapter: YouTube AI Tool Reviews
+---
+name: youtube-ai
+description: 從 YouTube 搜尋 Claude/MCP 工具介紹影片
+enabled: true
+tool: firecrawl_search
+schedule: weekly  # YouTube 內容更新較慢，每週一次即可
+
+queries:
+  - "Claude Code MCP server tutorial site:youtube.com"
+  - "Claude Code new tools 2026 site:youtube.com"
+
+extract_fields:
+  - title
+  - url
+  - channel
+  - view_count
+  - mentioned_tools
+
+instructions: |
+  找出介紹 Claude Code / MCP 工具的 YouTube 影片。
+  重點關注：有實際 demo 的影片（不只是概念介紹）。
+  如果影片提到具體工具名稱和 GitHub URL，提取出來。
+  觀看數 > 5000 的影片給予較高 community signal。

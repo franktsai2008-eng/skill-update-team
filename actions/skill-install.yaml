@@ -1,0 +1,26 @@
+# Action Handler: Claude Code Skill 安裝
+---
+name: skill-install
+description: 安裝 Claude Code skill 到 ~/.claude/skills/
+type: claude-plugin
+enabled: true
+
+match:
+  finding_type: claude-plugin
+  sub_type: skill
+
+snapshot_files:
+  - ~/.claude/skills/
+
+install_template: |
+  mkdir -p ~/.claude/skills/{name}
+  # 如果是 GitHub repo，clone 並提取 SKILL.md
+  git clone --depth 1 {url} /tmp/aiaa-skill-{name}
+  cp /tmp/aiaa-skill-{name}/SKILL.md ~/.claude/skills/{name}/
+  rm -rf /tmp/aiaa-skill-{name}
+
+smoke_test: |
+  test -f ~/.claude/skills/{name}/SKILL.md
+
+rollback: |
+  rm -rf ~/.claude/skills/{name}

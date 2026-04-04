@@ -1,0 +1,17 @@
+# Scorer: Preference History
+---
+name: preference
+description: 根據使用者歷史偏好調整分數
+weight: 0.10
+enabled: true
+
+scoring_rules: |
+  根據使用者過去的 approve/reject 記錄調整分數（0-1）：
+  - 與過去 approve 的工具類型相似: 0.8
+  - 無歷史參考: 0.5（中立）
+  - 與過去 reject 的工具類型相似: 0.2
+  - 使用者明確 reject 過類似功能: 0.1
+
+  偏好歷史會從 preferences.jsonl 注入。
+  注意：如果使用者最近開始 approve 一個之前 reject 的類別，
+  代表偏好在變化，應該適度提高該類別的分數。

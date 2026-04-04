@@ -1,0 +1,26 @@
+# Source Adapter: Anthropic Official Changelog
+---
+name: anthropic-changelog
+description: 監控 Anthropic 官方 changelog 和新功能
+enabled: true
+tool: firecrawl_scrape
+schedule: daily
+
+urls:
+  - "https://docs.anthropic.com/en/changelog"
+  - "https://github.com/anthropics/claude-code/releases"
+
+extract_fields:
+  - feature_name
+  - date
+  - description
+  - breaking_changes
+  - new_capabilities
+
+instructions: |
+  監控 Anthropic 官方更新。重點關注：
+  - 新的 built-in MCP servers
+  - Claude Code CLI 新 flag 或功能
+  - API 變更（可能影響現有 MCP）
+  - 新的 permission mode 或 security 功能
+  如果有 breaking change，urgency 自動標為 Critical。

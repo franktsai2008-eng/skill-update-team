@@ -1,0 +1,26 @@
+# Source Adapter: GitHub MCP Servers
+---
+name: github-mcp
+description: 搜尋 GitHub 上新的 MCP servers
+enabled: true
+tool: firecrawl_search
+schedule: daily
+
+queries:
+  - "MCP server site:github.com stars:>50 pushed:>{{7_DAYS_AGO}}"
+  - "modelcontextprotocol server site:github.com stars:>30 pushed:>{{7_DAYS_AGO}}"
+
+extract_fields:
+  - name
+  - url
+  - description
+  - stars
+  - last_commit
+  - install_method
+
+# 此 adapter 的特殊處理邏輯（會被注入到 Research prompt 中）
+instructions: |
+  搜尋 GitHub 上的 MCP server 專案。
+  重點關注：有 mcp.json 或 package.json 中包含 @modelcontextprotocol 的 repo。
+  排除：fork 數 > original stars 的 repo（可能是 fork spam）。
+  對每個結果，嘗試從 README 中提取安裝指令。

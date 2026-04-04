@@ -1,0 +1,27 @@
+# Source Adapter: GitHub Claude Code Tools
+---
+name: github-claude-tools
+description: 搜尋 Claude Code 相關的 plugin、extension、skill
+enabled: true
+tool: firecrawl_search
+schedule: daily
+
+queries:
+  - "claude code plugin OR extension OR skill site:github.com stars:>20 pushed:>{{7_DAYS_AGO}}"
+  - "claude-code-hook OR claude-code-plugin site:github.com pushed:>{{30_DAYS_AGO}}"
+
+extract_fields:
+  - name
+  - url
+  - description
+  - stars
+  - last_commit
+  - install_method
+
+instructions: |
+  搜尋 Claude Code 的擴展工具，包括：
+  - Skills（放在 .claude/skills/ 的 SKILL.md）
+  - Hooks（settings.json 中的 hooks 設定）
+  - Custom agents（--agents flag 定義的 agent）
+  - Plugins（.claude/plugins/ 下的 plugin）
+  區分 MCP server 和 Claude Code native 擴展。

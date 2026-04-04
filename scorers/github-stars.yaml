@@ -1,0 +1,17 @@
+# Scorer: GitHub Stars
+---
+name: github-stars
+description: 根據 GitHub star 數評分
+weight: 0.25
+enabled: true
+
+# 評分邏輯（注入到 prompt）
+scoring_rules: |
+  根據 GitHub stars 數量給分（0-1）：
+  - > 5000 stars: 1.0
+  - > 1000 stars: 0.8
+  - > 500 stars: 0.7
+  - > 100 stars: 0.4
+  - > 50 stars: 0.2
+  - ≤ 50 stars: 0.1
+  如果不是 GitHub 項目或無法取得 star 數，給 0.3（中立）。

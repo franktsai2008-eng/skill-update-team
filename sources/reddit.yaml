@@ -1,0 +1,25 @@
+# Source Adapter: Reddit AI Communities
+---
+name: reddit
+description: 從 Reddit AI 社群搜尋新工具討論
+enabled: true
+tool: firecrawl_search
+schedule: daily
+
+queries:
+  - "site:reddit.com/r/ClaudeAI new MCP tool"
+  - "site:reddit.com/r/ClaudeAI new plugin extension"
+  - "site:reddit.com/r/LocalLLaMA MCP server new"
+
+extract_fields:
+  - title
+  - url
+  - upvotes
+  - comment_count
+  - mentioned_tools
+
+instructions: |
+  從 Reddit 討論中找出被提及的新工具。
+  重點關注：高 upvote 的帖子、多人推薦的工具。
+  忽略：純討論帖（沒有具體工具名稱）、自我推廣帖。
+  如果帖子提到 GitHub repo，提取 URL。

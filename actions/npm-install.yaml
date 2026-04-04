@@ -1,0 +1,22 @@
+# Action Handler: npm 全域安裝
+---
+name: npm-install
+description: 透過 npm install -g 安裝 CLI 工具
+type: cli-tool
+enabled: true
+
+match:
+  finding_type: cli-tool
+  install_method: npm
+
+snapshot_files:
+  - /dev/null  # npm -g 的 rollback 用 npm uninstall
+
+install_template: |
+  npm install -g {package}
+
+smoke_test: |
+  which {name} && {name} --version
+
+rollback: |
+  npm uninstall -g {package}

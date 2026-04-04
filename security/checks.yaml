@@ -1,0 +1,68 @@
+# Security Checks — 對所有建議的 skill/MCP 執行安全審查
+---
+name: skill-security-checks
+description: 在 approve 之前自動執行的安全檢查清單
+enabled: true
+
+# 每項 check 必須全部 PASS 才能進入安裝
+checks:
+
+  - id: repo-trust
+    name: Repository 信任度
+    description: 檢查 repo 來源是否可信
+    rules: |
+      - 有超過 50 stars 且非 fork spam
+      - repo owner 有其他活躍專案（非一次性帳號）
+      - 有 LICENSE 檔案
+      - 非 archive 狀態
+    severity: block    # block = 不通過就不能裝, warn = 警告但可繼續
+
+  - id: code-review
+    name: 程式碼安全掃描
+    description: 掃描 install script 和主程式的危險行為
+    rules: |
+      - 不包含 curl | sh 或 wget | bash 的 pipe 安裝
+      - 不包含 eval() 對外部輸入的動態執行
+      - 不包含對 ~/.ssh/、~/.aws/、~/.env 等敏感目錄的讀取
+      - 不包含 postinstall script 中的網路請求
+      - 不包含 obfuscated（混淆）程式碼
+    severity: block
+
+  - id: permissions-scope
+    name: 權限範圍檢查
+    description: 確認 MCP/skill 請求的權限合理
+    rules: |
+      - MCP server 不應要求 filesystem 全域存取
+      - 不應要求 dangerously-skip-permissions
+      - 請求的 API scope 與功能描述相符
+      - 不應需要 root/sudo 權限
+    severity: block
+
+  - id: dependency-audit
+    name: Dependency 安全審查
+    description: 檢查依賴鏈是否安全
+    rules: |
+      - npm 套件無 known vulnerability（npm audit）
+      - pip 套件無 known CVE
+      - 依賴數量合理（< 200 直接依賴視為警告）
+      - 無 typosquatting 嫌疑（名稱與知名套件過於相似）
+    severity: warn
+
+  - id: data-exfil
+    name: 資料外洩風險
+    description: 檢查是否有可疑的資料傳輸行為
+    rules: |
+      - 不應在非必要情況下傳送本地檔案到外部 server
+      - 不應收集 telemetry 而未明確告知
+      - API key/token 不應被 log 或傳送到第三方
+      - 不應 monkey-patch 其他 MCP 或 Claude 的行為
+    severity: block
+
+  - id: freshness
+    name: 維護狀態
+    description: 確認專案仍在維護中
+    rules: |
+      - 最後 commit 在 180 天內
+      - 有回應 issues（如果有 issue tracker）
+      - README 有基本的使用說明
+    severity: warn

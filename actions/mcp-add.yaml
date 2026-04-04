@@ -1,0 +1,26 @@
+# Action Handler: MCP Server 安裝
+---
+name: mcp-add
+description: 透過 claude mcp add 安裝 MCP server
+type: mcp-server
+enabled: true
+
+# 匹配條件：finding 的 type 是 mcp-server 時觸發
+match:
+  finding_type: mcp-server
+
+# 安裝前要 snapshot 的檔案
+snapshot_files:
+  - ~/.claude/settings.json
+  - ~/.claude/settings.local.json
+
+# 安裝指令模板（{name}, {package} 從 finding 注入）
+install_template: |
+  claude mcp add {name} --scope user -- npx -y {package}
+
+# Smoke test
+smoke_test: |
+  claude mcp list 2>/dev/null | grep -q "{name}.*✓ Connected"
+
+# Rollback 方式
+rollback: restore_snapshot

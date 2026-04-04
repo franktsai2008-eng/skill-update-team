@@ -1,0 +1,14 @@
+# Scorer: Community Signal
+---
+name: community
+description: 根據社群討論度評分
+weight: 0.15
+enabled: true
+
+scoring_rules: |
+  根據工具在社群中的被提及程度給分（0-1）：
+  - 被多個獨立來源提及（GitHub + Reddit + YouTube）: 1.0
+  - 被兩個來源提及: 0.7
+  - 僅被單一來源提及但有高互動: 0.5
+  - 僅被單一來源提及: 0.3
+  - 僅自我推廣: 0.1
