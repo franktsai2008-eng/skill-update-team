@@ -5,7 +5,7 @@ description: >
   掃描 GitHub、Reddit、YouTube、Anthropic changelog，發現新的 MCP servers、
   Claude Code plugins、AI 工具，經安全檢查後推薦安裝。
   Plugin 架構：sources / scorers / actions 均可獨立擴展。
-  觸發關鍵字："掃描新工具"、"有什麼新的 MCP"、"sut"、"sut scan"、"工具推薦"、"skill update"
+  觸發方式：使用 /skill-update-team 指令觸發（如 "/skill-update-team"、"/skill-update-team approve <id>"）
 ---
 
 # Skill Update Team (SUT)
@@ -18,17 +18,17 @@ description: >
 
 | 使用者說 | 動作 |
 |---------|------|
-| `sut scan` / 掃描新工具 / 有什麼新的 MCP | → 執行 **SCAN** |
-| `sut report` / 看報告 | → 執行 **REPORT** |
-| `sut check <id>` | → 執行 **SECURITY AUDIT** |
-| `sut approve <id>` | → 執行 **APPROVE** |
-| `sut reject <id>` | → 執行 **REJECT** |
-| `sut defer <id>` | → 執行 **DEFER** |
-| `sut rollback` | → 執行 **ROLLBACK** |
-| `sut health` / 檢查工具健康 | → 執行 **HEALTH CHECK** |
-| `sut trust <source/type>` | → 加入 auto-trust 清單 |
-| `sut untrust <source/type>` | → 移除 auto-trust |
-| `sut adjust-weights` | → 手動調整 scorer 權重 |
+| `/skill-update-team` | → 執行 **SCAN** + **REPORT** |
+| `/skill-update-team report` | → 執行 **REPORT**（僅顯示上次報告） |
+| `/skill-update-team check <id>` | → 執行 **SECURITY AUDIT** |
+| `/skill-update-team approve <id>` | → 執行 **APPROVE** |
+| `/skill-update-team reject <id>` | → 執行 **REJECT** |
+| `/skill-update-team defer <id>` | → 執行 **DEFER** |
+| `/skill-update-team rollback` | → 執行 **ROLLBACK** |
+| `/skill-update-team health` | → 執行 **HEALTH CHECK** |
+| `/skill-update-team trust <source/type>` | → 加入 auto-trust 清單 |
+| `/skill-update-team untrust <source/type>` | → 移除 auto-trust |
+| `/skill-update-team adjust-weights` | → 手動調整 scorer 權重 |
 
 ---
 
@@ -145,7 +145,7 @@ json.dump(merged, open('$HOME/skill-update-team/state/seen.json', 'w'), indent=2
 - ...
 - **總分: ...**
 
-→ `sut check <id>` → `sut approve <id>`
+→ `/skill-update-team check <id>` → `/skill-update-team approve <id>`
 
 ---
 
@@ -167,7 +167,7 @@ json.dump(merged, open('$HOME/skill-update-team/state/seen.json', 'w'), indent=2
 
 ### Step 4: 顯示推薦 & 清理建議
 
-1. 只顯示 urgency = critical 或 important 的項目（精簡版），告訴使用者可以 `sut check <id>` 或 `sut approve <id>`。
+1. 只顯示 urgency = critical 或 important 的項目（精簡版），告訴使用者可以 `/skill-update-team check <id>` 或 `/skill-update-team approve <id>`。
 2. 如果有 `cleanup_suggestions`，顯示建議清理的舊工具及原因。
 
 確保目錄存在：`mkdir -p ~/skill-update-team/state ~/skill-update-team/snapshots ~/skill-update-team/logs`
@@ -192,7 +192,7 @@ json.dump(merged, open('$HOME/skill-update-team/state/seen.json', 'w'), indent=2
 🔴 SUT 發現 <N> 項重要更新：
 <finding-1-name> — <one-line-reason>
 <finding-2-name> — <one-line-reason>
-→ 在 Claude Code 中輸入 `sut report` 查看完整報告
+→ 在 Claude Code 中輸入 `/skill-update-team report` 查看完整報告
 ```
 
 ---
@@ -374,7 +374,7 @@ Agent(
 ### Step 3: 顯示結果
 
 顯示每個工具的健康狀態，特別標記 `recommendation="consider_removing"` 的項目。
-建議使用者對這些項目執行 `sut rollback` 或手動移除。
+建議使用者對這些項目執行 `/skill-update-team rollback` 或手動移除。
 
 ---
 

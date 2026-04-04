@@ -7,7 +7,7 @@ SUT scans GitHub, Reddit, YouTube, and Anthropic changelog for new MCP servers, 
 ## How It Works
 
 ```
-You: "sut scan"
+You: /skill-update-team
        ↓
 Orchestrator (SKILL.md) reads plugin YAMLs, collects your environment info
        ↓
@@ -19,7 +19,7 @@ Shows you only high-scoring recommendations with:
   - Score breakdown
   - Deprecated skill cleanup suggestions
        ↓
-You: "sut approve <id>"
+You: /skill-update-team approve <id>
        ↓
 Spawns Security Auditor (subagent) → 6 checks → Snapshot → Install → Smoke test
 ```
@@ -54,13 +54,14 @@ Then add the skill to Claude Code. The `SKILL.md` in this repo is the skill entr
 Just talk to Claude Code:
 
 ```
-sut scan              # Scan for new tools
-sut report            # View last scan report
-sut check <id>        # Run security audit on a finding
-sut approve <id>      # Install (security check → snapshot → install → smoke test)
-sut reject <id>       # Reject (influences future scoring)
-sut defer <id>        # Defer for later
-sut rollback          # Revert last installation
+/skill-update-team                # Scan for new tools + show report
+/skill-update-team report         # View last scan report
+/skill-update-team check <id>     # Run security audit on a finding
+/skill-update-team approve <id>   # Install (security check → snapshot → install → smoke test)
+/skill-update-team reject <id>    # Reject (influences future scoring)
+/skill-update-team defer <id>     # Defer for later
+/skill-update-team rollback       # Revert last installation
+/skill-update-team health         # Check installed tools health
 ```
 
 No CLI scripts needed — everything runs through Claude Code's skill and agent system.
@@ -69,7 +70,7 @@ No CLI scripts needed — everything runs through Claude Code's skill and agent 
 
 | Platform | How | Notes |
 |----------|-----|-------|
-| **Claude Code (CLI)** | Say "sut scan" | Best experience |
+| **Claude Code (CLI)** | Type `/skill-update-team` | Best experience |
 | **Claude Code (IDE)** | Same — in the chat | VS Code / JetBrains |
 | **Co-work / Chat** | Not supported | Requires Agent tool |
 
@@ -116,7 +117,7 @@ Every tool goes through 6 automated security checks before installation:
 - Any **warn** fails → **CAUTION** (asks for confirmation)
 - All pass → **SAFE**
 
-A snapshot of your Claude settings is saved before every install. Say `sut rollback` to revert.
+A snapshot of your Claude settings is saved before every install. Say `/skill-update-team rollback` to revert.
 
 ### Self-Discovery
 
@@ -192,10 +193,10 @@ A: ~$0.10-0.30 per scan (subagents use Sonnet).
 A: The orchestrator runs on whatever model your Claude Code session uses. Subagents default to Sonnet for cost efficiency.
 
 **Q: What if an install breaks something?**
-A: Say `sut rollback`. It restores your Claude settings from the pre-install snapshot.
+A: Say `/skill-update-team rollback`. It restores your Claude settings from the pre-install snapshot.
 
 **Q: Does it auto-install anything?**
-A: No. Every installation requires your explicit `sut approve`.
+A: No. Every installation requires your explicit `/skill-update-team approve`.
 
 ## License
 
