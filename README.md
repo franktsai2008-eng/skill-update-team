@@ -33,7 +33,7 @@ Security audit (6 checks) → Snapshot → Install → Smoke test
 ### 2. Install
 
 ```bash
-git clone https://github.com/FrankTsai77/skill-update-team.git ~/skill-update-team
+git clone https://github.com/franktsai2008-eng/skill-update-team.git ~/skill-update-team
 chmod +x ~/skill-update-team/run.sh
 
 # Add to PATH (pick one)
