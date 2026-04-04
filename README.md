@@ -7,20 +7,32 @@ SUT scans GitHub, Reddit, YouTube, and Anthropic changelog for new MCP servers, 
 ## How It Works
 
 ```
-You: sut scan
+You: "sut scan"
        ↓
-Research Agent (claude -p) scans all sources → scores each tool → generates report
+Orchestrator (SKILL.md) reads plugin YAMLs, collects your environment info
+       ↓
+Spawns Research Agent (subagent, sonnet) → scans all sources → scores → JSON report
        ↓
 Shows you only high-scoring recommendations with:
   - What it does (features)
   - Why it's relevant to YOUR setup
   - Score breakdown
-  - One-command install
+  - Deprecated skill cleanup suggestions
        ↓
-You: sut approve <id>
+You: "sut approve <id>"
        ↓
-Security audit (6 checks) → Snapshot → Install → Smoke test
+Spawns Security Auditor (subagent) → 6 checks → Snapshot → Install → Smoke test
 ```
+
+## Architecture
+
+SUT runs as a **Claude Code skill** using the **multi-agent pattern**:
+
+- **SKILL.md** = lightweight orchestrator (runs in your main conversation)
+- **Research Agent** = heavy lifting, spawned via `Agent(model="sonnet")` — isolated context
+- **Security Auditor** = spawned per-tool audit, also via `Agent(model="sonnet")`
+
+This keeps your main conversation clean while the subagents do the expensive work.
 
 ## Quick Start
 
@@ -28,45 +40,66 @@ Security audit (6 checks) → Snapshot → Install → Smoke test
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
 - [Firecrawl MCP](https://github.com/anthropics/claude-code/blob/main/docs/mcp.md) connected (for web scraping)
-- macOS / Linux, bash, python3, jq
 
 ### 2. Install
 
 ```bash
 git clone https://github.com/franktsai2008-eng/skill-update-team.git ~/skill-update-team
-chmod +x ~/skill-update-team/run.sh
-
-# Add to PATH (pick one)
-ln -sf ~/skill-update-team/run.sh ~/bin/sut        # if ~/bin is in PATH
-# or
-echo 'alias sut="~/skill-update-team/run.sh"' >> ~/.zshrc && source ~/.zshrc
 ```
+
+Then add the skill to Claude Code. The `SKILL.md` in this repo is the skill entry point — Claude Code will pick it up from `~/skill-update-team/`.
 
 ### 3. Use
 
-```bash
-sut scan              # Scan for new tools (the main command)
+Just talk to Claude Code:
+
+```
+sut scan              # Scan for new tools
 sut report            # View last scan report
 sut check <id>        # Run security audit on a finding
-sut approve <id>      # Install (auto: security check → snapshot → install → smoke test)
+sut approve <id>      # Install (security check → snapshot → install → smoke test)
 sut reject <id>       # Reject (influences future scoring)
 sut defer <id>        # Defer for later
 sut rollback          # Revert last installation
 ```
 
-That's it. Run `sut scan` when you want to check for new tools.
+No CLI scripts needed — everything runs through Claude Code's skill and agent system.
 
 ## Where to Use
 
 | Platform | How | Notes |
 |----------|-----|-------|
-| **Claude Code (CLI)** | Type `sut scan` in terminal | Best experience — full interactive flow |
-| **Claude Code (IDE)** | Same — use the built-in terminal | VS Code / JetBrains both work |
-| **Co-work / Chat** | Not supported | Requires CLI access (`claude -p`) |
+| **Claude Code (CLI)** | Say "sut scan" | Best experience |
+| **Claude Code (IDE)** | Same — in the chat | VS Code / JetBrains |
+| **Co-work / Chat** | Not supported | Requires Agent tool |
 
-SUT is a CLI tool that calls `claude -p` (print mode) internally. It needs terminal access, so it only works in Claude Code or any terminal environment.
+## Features
 
-## Security
+### Tool Discovery & Scoring
+
+Each discovered tool is scored across 5 dimensions:
+
+| Scorer | Weight | What It Measures |
+|--------|--------|------------------|
+| relevance | 0.30 | Does it enhance your current setup or fill a gap? |
+| github-stars | 0.25 | Community adoption |
+| recency | 0.20 | How recently updated |
+| community | 0.15 | Found in multiple sources |
+| preference | 0.10 | Matches your past approve/reject history |
+
+**Final score** = weighted sum. Only **Important (>= 0.65)** and **Critical (>= 0.85)** are actively recommended.
+
+### Deprecated Skill Cleanup
+
+During scans, SUT also checks your installed MCP servers and skills for:
+- Tools that have been **superseded** by a newer/better alternative
+- Tools that are **unmaintained** (no updates in 180+ days, archived repos)
+- Tools with **overlapping functionality** (>80% overlap with another installed tool)
+- Tools that have known **security vulnerabilities**
+
+These appear in the report under "Cleanup Suggestions" with recommended actions.
+
+### Security
 
 Every tool goes through 6 automated security checks before installation:
 
@@ -79,11 +112,15 @@ Every tool goes through 6 automated security checks before installation:
 | data-exfil | **block** | No unauthorized data transmission |
 | freshness | warn | Last commit within 180 days |
 
-- Any **block** check fails → **BLOCKED** (refuses to install)
-- Any **warn** check fails → **CAUTION** (asks for confirmation)
+- Any **block** fails → **BLOCKED** (refuses to install)
+- Any **warn** fails → **CAUTION** (asks for confirmation)
 - All pass → **SAFE**
 
-A snapshot of your Claude settings is saved before every install. Run `sut rollback` to revert.
+A snapshot of your Claude settings is saved before every install. Say `sut rollback` to revert.
+
+### Self-Discovery
+
+During scans, the Research Agent may discover new sources, scoring dimensions, or install methods worth adding. These appear in the report as suggestions — never auto-installed.
 
 ## Plugin Architecture
 
@@ -91,7 +128,7 @@ SUT is fully extensible. Drop a YAML file in the right directory and it auto-loa
 
 ```
 skill-update-team/
-├── run.sh                # CLI entry point
+├── SKILL.md              # Skill entry point (orchestrator)
 ├── config.yaml           # Default config
 ├── prompts/
 │   ├── research.md       # Research Agent prompt
@@ -146,34 +183,16 @@ smoke_test: "my-tool list | grep {name}"
 rollback: "my-tool uninstall {package}"
 ```
 
-## How Scoring Works
-
-Each discovered tool is scored across 5 dimensions:
-
-| Scorer | Weight | What It Measures |
-|--------|--------|------------------|
-| relevance | 0.30 | Does it enhance your current setup or fill a gap? |
-| github-stars | 0.25 | Community adoption |
-| recency | 0.20 | How recently updated |
-| community | 0.15 | Found in multiple sources |
-| preference | 0.10 | Matches your past approve/reject history |
-
-**Final score** = weighted sum. Only **Important (>= 0.65)** and **Critical (>= 0.85)** are actively recommended.
-
-## Self-Discovery
-
-During scans, the Research Agent may discover new sources, scoring dimensions, or install methods worth adding. These appear in the report under "Self-discovery" as suggestions — never auto-installed.
-
 ## FAQ
 
 **Q: How much does a scan cost?**
-A: ~$0.10-0.30 per scan (uses Claude Sonnet with a $0.50 budget cap).
+A: ~$0.10-0.30 per scan (subagents use Sonnet).
 
 **Q: Can I use a different model?**
-A: Edit `config.yaml` → `claude.model`. Opus is more thorough but costs more.
+A: The orchestrator runs on whatever model your Claude Code session uses. Subagents default to Sonnet for cost efficiency.
 
 **Q: What if an install breaks something?**
-A: Run `sut rollback`. It restores your Claude settings from the pre-install snapshot.
+A: Say `sut rollback`. It restores your Claude settings from the pre-install snapshot.
 
 **Q: Does it auto-install anything?**
 A: No. Every installation requires your explicit `sut approve`.

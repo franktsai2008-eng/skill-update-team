@@ -5,7 +5,8 @@
 已安裝的 MCP servers：
 {{INSTALLED_MCPS}}
 
-已安裝的 Skills：notebooklm、youtube-transcript-cowork、youtube-via-notebooklm
+已安裝的 Skills：
+{{INSTALLED_SKILLS}}
 技術棧：macOS 26.2 / Node 22 / Python 3.12 / Claude Code 2.1.92
 今天日期：{{TODAY}}
 
@@ -58,6 +59,22 @@
 
 只有 Important (≥0.65) 以上的才會直接推薦給使用者，所以這些項目的 features 和 why_for_you 要寫清楚。
 
+## 舊工具清理分析
+
+除了搜尋新工具，你也必須分析使用者目前已安裝的 MCP servers 和 skills，找出應該清理的項目：
+
+1. **被取代（superseded）**：有更好的替代品（例如新發現的工具完全涵蓋舊工具的功能）
+2. **無人維護（unmaintained）**：超過 180 天沒更新、repo 已 archived、maintainer 無回應
+3. **功能重疊（redundant）**：兩個已安裝的工具功能重疊 > 80%，建議保留較好的那個
+4. **已知漏洞（vulnerable）**：有已知安全問題
+
+對每個建議清理的工具，說明：
+- 為什麼建議清理
+- 如果是被取代，替代品是什麼
+- 移除指令
+
+在輸出 JSON 中加入 `cleanup_suggestions` 欄位。
+
 ## 排除規則
 
 - 與已安裝 MCP 功能重疊 > 80% → 降級為 Watch，標注原因
@@ -109,6 +126,16 @@
       },
       "urgency": "important",
       "reason": "為什麼推薦或不推薦"
+    }
+  ],
+  "cleanup_suggestions": [
+    {
+      "name": "已安裝的工具名稱",
+      "type": "mcp-server | skill",
+      "reason": "superseded | unmaintained | redundant | vulnerable",
+      "details": "為什麼建議清理（具體說明）",
+      "replaced_by": "替代品名稱（如果是 superseded）或 null",
+      "remove_command": "移除指令"
     }
   ],
   "meta_discoveries": [
