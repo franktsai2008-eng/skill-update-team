@@ -1,7 +1,7 @@
-# Action Handler: Claude Code Skill 安裝
+# Action Handler: Claude Code Skill 安裝（完整 repo 結構）
 ---
 name: skill-install
-description: 安裝 Claude Code skill 到 ~/.claude/skills/
+description: 安裝 Claude Code skill（完整 repo 結構）
 type: claude-plugin
 enabled: true
 
@@ -13,14 +13,29 @@ snapshot_files:
   - ~/.claude/skills/
 
 install_template: |
-  mkdir -p ~/.claude/skills/{name}
-  # 如果是 GitHub repo，clone 並提取 SKILL.md
+  SKILL_DIR=~/.claude/skills/{name}
+  mkdir -p "$SKILL_DIR"
   git clone --depth 1 {url} /tmp/aiaa-skill-{name}
-  cp /tmp/aiaa-skill-{name}/SKILL.md ~/.claude/skills/{name}/
+  # 複製完整 skill 結構（SKILL.md + templates + references + 其他）
+  if [ -f /tmp/aiaa-skill-{name}/SKILL.md ]; then
+    cp -R /tmp/aiaa-skill-{name}/* "$SKILL_DIR/"
+    # 清理不需要的檔案
+    rm -rf "$SKILL_DIR/.git" "$SKILL_DIR/.github" "$SKILL_DIR/LICENSE" "$SKILL_DIR/README.md"
+  else
+    # 有些 repo 的 skill 在子目錄中
+    SKILL_FILE=$(find /tmp/aiaa-skill-{name} -name "SKILL.md" -maxdepth 2 | head -1)
+    if [ -n "$SKILL_FILE" ]; then
+      SKILL_PARENT=$(dirname "$SKILL_FILE")
+      cp -R "$SKILL_PARENT"/* "$SKILL_DIR/"
+      rm -rf "$SKILL_DIR/.git" "$SKILL_DIR/.github"
+    else
+      echo "ERROR: No SKILL.md found in repo" && exit 1
+    fi
+  fi
   rm -rf /tmp/aiaa-skill-{name}
 
 smoke_test: |
-  test -f ~/.claude/skills/{name}/SKILL.md
+  test -f ~/.claude/skills/{name}/SKILL.md && echo "SKILL.md exists" || exit 1
 
 rollback: |
   rm -rf ~/.claude/skills/{name}

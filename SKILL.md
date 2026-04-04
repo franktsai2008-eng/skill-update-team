@@ -25,6 +25,10 @@ description: >
 | `sut reject <id>` | → 執行 **REJECT** |
 | `sut defer <id>` | → 執行 **DEFER** |
 | `sut rollback` | → 執行 **ROLLBACK** |
+| `sut health` / 檢查工具健康 | → 執行 **HEALTH CHECK** |
+| `sut trust <source/type>` | → 加入 auto-trust 清單 |
+| `sut untrust <source/type>` | → 移除 auto-trust |
+| `sut adjust-weights` | → 手動調整 scorer 權重 |
 
 ---
 
@@ -48,6 +52,18 @@ tail -20 ~/skill-update-team/state/preferences.jsonl 2>/dev/null
 
 # 已安裝的 skills（列出 ~/.claude/skills/ 下的目錄）
 ls ~/.claude/skills/ 2>/dev/null
+
+# Tech stack detection
+OS_VERSION=$(sw_vers -productVersion 2>/dev/null || echo "unknown")
+NODE_VERSION=$(node --version 2>/dev/null || echo "not installed")
+PYTHON_VERSION=$(python3 --version 2>/dev/null | awk '{print $2}' || echo "not installed")
+CLAUDE_VERSION=$(claude --version 2>/dev/null || echo "unknown")
+TECH_STACK="macOS $OS_VERSION / Node $NODE_VERSION / Python $PYTHON_VERSION / Claude Code $CLAUDE_VERSION"
+
+# 偵測 Firecrawl MCP 是否可用
+HAS_FIRECRAWL=$(claude mcp list 2>/dev/null | grep -c "firecrawl" || echo "0")
+
+cat ~/skill-update-team/state/seen.json 2>/dev/null || echo "[]"
 ```
 
 用 Read 讀取所有啟用的 plugin YAML：
@@ -67,6 +83,11 @@ ls ~/.claude/skills/ 2>/dev/null
 - `{{ACTIONS}}` → 所有啟用的 action YAML 內容（每個前面加 `--- Action: <name> ---`）
 - `{{INSTALLED_SKILLS}}` → `ls ~/.claude/skills/` 的結果
 - `{{TODAY}}` / `{{7_DAYS_AGO}}` / `{{30_DAYS_AGO}}` → 日期
+- `{{TECH_STACK}}` → `$TECH_STACK`
+- `{{SEEN_ITEMS}}` → seen.json content
+- `{{AVAILABLE_TOOLS}}` → 根據 HAS_FIRECRAWL 決定：
+  - If HAS_FIRECRAWL > 0: `"firecrawl_search, firecrawl_scrape, WebSearch, WebFetch"`
+  - If HAS_FIRECRAWL = 0: `"WebSearch, WebFetch（Firecrawl 不可用，請使用這兩個替代）"`
 
 然後用 **Agent tool** spawn Research Agent：
 
@@ -85,7 +106,21 @@ Research Agent 有權使用的工具：firecrawl_search、firecrawl_scrape、Con
 ### Step 3: 儲存結果 & 產出報告
 
 1. 把 Research Agent 回傳的 JSON 存到 `~/skill-update-team/state/research-<TODAY>.json`
-2. 從 JSON 產出 markdown 報告存到 `~/skill-update-team/state/report-<TODAY>.md`
+2. 更新 seen.json（合併新舊，去重）：
+
+```bash
+# 更新 seen.json（合併新舊，去重）
+python3 -c "
+import json
+old = json.load(open('$HOME/skill-update-team/state/seen.json')) if __import__('os').path.exists('$HOME/skill-update-team/state/seen.json') else []
+new_findings = json.load(open('$HOME/skill-update-team/state/research-$TODAY.json')).get('findings', [])
+new_urls = [f['url'] for f in new_findings if f.get('url')]
+merged = list(set(old + new_urls))
+json.dump(merged, open('$HOME/skill-update-team/state/seen.json', 'w'), indent=2)
+"
+```
+
+3. 從 JSON 產出 markdown 報告存到 `~/skill-update-team/state/report-<TODAY>.md`
 
 報告格式：
 ```markdown
@@ -136,6 +171,29 @@ Research Agent 有權使用的工具：firecrawl_search、firecrawl_scrape、Con
 2. 如果有 `cleanup_suggestions`，顯示建議清理的舊工具及原因。
 
 確保目錄存在：`mkdir -p ~/skill-update-team/state ~/skill-update-team/snapshots ~/skill-update-team/logs`
+
+**Auto-trust 判斷：**
+讀取 `~/skill-update-team/config.yaml`（或 `config.local.yaml`）的 `auto_trust` 設定。
+如果 `auto_trust.enabled` 為 true：
+- 檢查 finding 的 source 是否在 `trusted_sources` 中
+- 檢查是否為 `trusted_types` 中的更新類型（如 patch update）
+- 檢查今日已 auto-approve 的次數是否 < `max_auto_installs_per_day`
+- 如果都符合，自動執行 APPROVE 流程（仍然跑 security audit）
+- 在報告中標記為 "🤖 auto-approved"
+
+### Step 5: 推送通知（可選）
+
+如果有 Critical urgency 的發現：
+1. 檢查是否有 Slack MCP 可用：`claude mcp list 2>/dev/null | grep -c "Slack"`
+2. 如果有，發送精簡通知到使用者指定的 channel
+
+通知格式：
+```
+🔴 SUT 發現 <N> 項重要更新：
+<finding-1-name> — <one-line-reason>
+<finding-2-name> — <one-line-reason>
+→ 在 Claude Code 中輸入 `sut report` 查看完整報告
+```
 
 ---
 
@@ -220,7 +278,7 @@ echo "$SNAP_DIR" > ~/skill-update-team/state/last-snapshot.txt
 ### Step 5: 記錄偏好
 
 ```bash
-echo '{"date":"<TODAY>","id":"<id>","name":"<name>","decision":"approve","status":"installed"}' >> ~/skill-update-team/state/preferences.jsonl
+echo '{"date":"<TODAY>","id":"<id>","name":"<name>","decision":"approve","status":"installed","action_type":"<mcp-add|npm-install|pip-install|skill-install>","install_command":"<實際執行的安裝指令>","rollback_command":"<對應 action YAML 的 rollback 指令>","snapshot_dir":"<SNAP_DIR 路徑>"}' >> ~/skill-update-team/state/preferences.jsonl
 ```
 
 如果安裝失敗，自動 rollback 並記錄 status="failed"。
@@ -245,13 +303,78 @@ echo '{"date":"<TODAY>","id":"<id>","name":"<name>","decision":"reject","reason"
 
 ## ROLLBACK 流程
 
+### Step 1: 讀取最後一筆安裝記錄
+
+從 `~/skill-update-team/state/preferences.jsonl` 讀取最後一筆 `decision="approve"` 且 `status="installed"` 的記錄。
+
+### Step 2: 執行 rollback
+
+根據 `action_type` 決定 rollback 策略：
+- **mcp-add**: 還原 snapshot（settings.json）
+- **npm-install**: 執行記錄中的 `rollback_command`（`npm uninstall -g ...`）
+- **pip-install**: 執行 `rollback_command`（`pip3 uninstall -y ...`）
+- **skill-install**: 執行 `rollback_command`（`rm -rf ~/.claude/skills/...`）
+
+### Step 3: 還原 snapshot（如有）
+
+如果記錄中有 `snapshot_dir`，還原其中的設定檔：
+
 ```bash
-SNAP_DIR=$(cat ~/skill-update-team/state/last-snapshot.txt)
+SNAP_DIR=<記錄中的 snapshot_dir>
 cp "$SNAP_DIR/settings.json" ~/.claude/settings.json 2>/dev/null || true
 cp "$SNAP_DIR/settings.local.json" ~/.claude/settings.local.json 2>/dev/null || true
 ```
 
-告知使用者已還原。
+### Step 4: 更新記錄
+
+把該筆記錄的 status 改為 "rolled_back"：
+
+```bash
+# 用 python3 更新 preferences.jsonl 中最後一筆 installed 記錄
+python3 -c "
+import json
+lines = open('$HOME/skill-update-team/state/preferences.jsonl').readlines()
+result = []
+found = False
+for line in reversed(lines):
+    record = json.loads(line.strip())
+    if not found and record.get('decision') == 'approve' and record.get('status') == 'installed':
+        record['status'] = 'rolled_back'
+        found = True
+    result.insert(0, json.dumps(record, ensure_ascii=False))
+open('$HOME/skill-update-team/state/preferences.jsonl', 'w').write('\n'.join(result) + '\n')
+"
+```
+
+告知使用者已還原，顯示被 rollback 的工具名稱和類型。
+
+---
+
+## HEALTH CHECK 流程
+
+### Step 1: 收集已安裝工具
+
+從 `~/skill-update-team/state/preferences.jsonl` 讀取所有 `status="installed"` 的記錄，過濾出安裝超過 7 天的。
+
+### Step 2: 組裝 prompt 並 spawn Health Check Agent
+
+用 Read 讀取 `~/skill-update-team/prompts/post-install-check.md`，替換：
+- `{{INSTALLED_ITEMS}}` → 過濾後的已安裝工具清單（JSON 格式）
+- `{{TODAY}}` → 今天日期
+
+```
+Agent(
+  description="SUT health check",
+  subagent_type="general-purpose",
+  model="sonnet",
+  prompt=<組裝好的 health check prompt>
+)
+```
+
+### Step 3: 顯示結果
+
+顯示每個工具的健康狀態，特別標記 `recommendation="consider_removing"` 的項目。
+建議使用者對這些項目執行 `sut rollback` 或手動移除。
 
 ---
 

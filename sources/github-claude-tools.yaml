@@ -4,6 +4,7 @@ name: github-claude-tools
 description: 搜尋 Claude Code 相關的 plugin、extension、skill
 enabled: true
 tool: firecrawl_search
+fallback: WebSearch
 schedule: daily
 
 queries:

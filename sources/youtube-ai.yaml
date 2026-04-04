@@ -4,6 +4,7 @@ name: youtube-ai
 description: 從 YouTube 搜尋 Claude/MCP 工具介紹影片
 enabled: true
 tool: firecrawl_search
+fallback: WebSearch
 schedule: weekly  # YouTube 內容更新較慢，每週一次即可
 
 queries:

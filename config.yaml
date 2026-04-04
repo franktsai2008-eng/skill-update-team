@@ -20,3 +20,12 @@ scoring:
     important: 0.65      # 建議安裝（會主動問你）
     nice_to_have: 0.40   # 可考慮
     watch: 0.0           # 持續觀察
+
+# ── Auto-trust（預設關閉）────────────────────
+auto_trust:
+  enabled: false
+  trusted_sources:
+    - "anthropic"
+  trusted_types:
+    - "patch_update"
+  max_auto_installs_per_day: 2

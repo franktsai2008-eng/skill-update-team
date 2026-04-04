@@ -7,7 +7,7 @@
 
 已安裝的 Skills：
 {{INSTALLED_SKILLS}}
-技術棧：macOS 26.2 / Node 22 / Python 3.12 / Claude Code 2.1.92
+技術棧：{{TECH_STACK}}
 今天日期：{{TODAY}}
 
 ## 使用者偏好歷史
@@ -75,6 +75,20 @@
 
 在輸出 JSON 中加入 `cleanup_suggestions` 欄位。
 
+## 已看過的項目（跳過或降級）
+
+以下 URL 在之前的掃描中已出現過。如果這些工具沒有重大更新（新 major version、重要功能變更），請跳過。如果有重大更新，可以重新推薦但要在 reason 中說明「之前已掃過，這次因 XXX 重新推薦」。
+
+{{SEEN_ITEMS}}
+
+## 可用工具
+
+{{AVAILABLE_TOOLS}}
+
+如果 firecrawl 不可用，請使用 WebSearch + WebFetch 替代。
+搜尋策略不變，但改用 WebSearch(query="...") 搜尋，
+再用 WebFetch(url="...") 取得頁面內容。
+
 ## 排除規則
 
 - 與已安裝 MCP 功能重疊 > 80% → 降級為 Watch，標注原因
@@ -89,6 +103,14 @@
 3. 去重（同一工具可能出現在多個 source）
 4. 排序並分級
 5. 檢查是否有 meta_discoveries
+
+## Scorer 權重調整建議
+
+根據使用者的偏好歷史（approve/reject 記錄），分析目前的 scorer 權重是否合理。
+例如：如果使用者經常 approve 低 star 但高 relevance 的工具，建議降低 github-stars 的權重、提高 relevance 的權重。
+
+不要自動修改權重，只在輸出 JSON 的 `weight_adjustment_suggestions` 中提出建議。
+使用者可以用 `sut adjust-weights` 手動執行調整。
 
 ## 輸出格式
 
@@ -144,6 +166,14 @@
       "name": "建議的名稱",
       "description": "為什麼建議加入",
       "suggested_config": "YAML 格式的設定建議"
+    }
+  ],
+  "weight_adjustment_suggestions": [
+    {
+      "scorer": "scorer-name",
+      "current_weight": 0.25,
+      "suggested_weight": 0.20,
+      "reason": "根據使用者偏好歷史的建議調整理由"
     }
   ],
   "summary": {

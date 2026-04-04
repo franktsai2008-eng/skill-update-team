@@ -4,6 +4,7 @@ name: github-mcp
 description: 搜尋 GitHub 上新的 MCP servers
 enabled: true
 tool: firecrawl_search
+fallback: WebSearch
 schedule: daily
 
 queries:

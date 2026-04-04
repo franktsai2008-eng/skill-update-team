@@ -1,0 +1,26 @@
+# Source Adapter: RSS/Atom Feeds
+---
+name: rss-feeds
+description: 透過 RSS 監控官方 release feed（比爬網頁更穩定省資源）
+enabled: true
+tool: WebFetch
+fallback: WebFetch
+schedule: daily
+
+feeds:
+  - name: anthropic-claude-code
+    url: "https://github.com/anthropics/claude-code/releases.atom"
+  - name: mcp-servers-official
+    url: "https://github.com/modelcontextprotocol/servers/releases.atom"
+  - name: awesome-mcp-servers
+    url: "https://github.com/punkpeye/awesome-mcp-servers/commits/main.atom"
+
+instructions: |
+  對每個 feed URL 使用 WebFetch 取得 Atom/RSS 內容。
+  解析 XML 中的 <entry> 或 <item>，提取：
+  - title
+  - link
+  - updated / pubDate
+  - summary / content
+  只保留 {{7_DAYS_AGO}} 之後的條目。
+  RSS 的優勢是結構化資料，不需要 Firecrawl。

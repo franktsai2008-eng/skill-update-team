@@ -4,6 +4,7 @@ name: anthropic-changelog
 description: 監控 Anthropic 官方 changelog 和新功能
 enabled: true
 tool: firecrawl_scrape
+fallback: WebFetch
 schedule: daily
 
 urls:

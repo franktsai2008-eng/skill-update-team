@@ -4,6 +4,7 @@ name: reddit
 description: 從 Reddit AI 社群搜尋新工具討論
 enabled: true
 tool: firecrawl_search
+fallback: WebSearch
 schedule: daily
 
 queries:
