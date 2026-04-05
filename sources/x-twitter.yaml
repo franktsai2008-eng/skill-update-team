@@ -7,11 +7,16 @@ tool: firecrawl_search
 fallback: WebSearch
 schedule: daily
 
-queries:
+queries_firecrawl:
   - "site:x.com Claude Code MCP server new"
   - "site:x.com claude-code plugin OR extension OR skill"
   - "site:x.com modelcontextprotocol new tool"
   - "site:x.com \"claude code\" hook OR agent OR skill"
+queries_websearch:
+  - "x.com Claude Code MCP server new 2026"
+  - "x.com claude-code plugin extension skill"
+  - "twitter modelcontextprotocol new tool"
+  - "twitter claude code hook agent skill new"
 
 extract_fields:
   - author

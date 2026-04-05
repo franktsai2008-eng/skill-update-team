@@ -13,6 +13,12 @@ plugins:
   scorers_dir: scorers
   actions_dir: actions
 
+# ── 掃描模式 ─────────────────────────────────
+scan:
+  mode: diff                # diff = 只搜新東西（省 token）; full = 全量掃描
+  full_scan_interval: 7     # diff 模式下，每 N 天自動做一次 full scan
+  last_full_scan: null      # Orchestrator 自動更新此欄位
+
 # ── 評分門檻 ─────────────────────────────────
 scoring:
   urgency_thresholds:
@@ -20,6 +26,21 @@ scoring:
     important: 0.65      # 建議安裝（會主動問你）
     nice_to_have: 0.40   # 可考慮
     watch: 0.0           # 持續觀察
+
+# ── 使用者 Context（讓 relevance 評分更精準）──
+user_context:
+  current_projects:
+    - name: "Mission Market"
+      stack: ["Next.js", "Supabase", "Vercel", "Tailwind"]
+      stage: "MVP development"
+  interests:
+    - "全端 SaaS 開發"
+    - "AI agent 自動化"
+    - "開發效率工具"
+  avoid:
+    - "區塊鏈/Web3 工具"
+    - "純 Python ML 框架"
+    - "遊戲開發工具"
 
 # ── Auto-trust（預設關閉）────────────────────
 auto_trust:

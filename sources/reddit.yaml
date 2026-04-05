@@ -7,10 +7,14 @@ tool: firecrawl_search
 fallback: WebSearch
 schedule: daily
 
-queries:
+queries_firecrawl:
   - "site:reddit.com/r/ClaudeAI new MCP tool"
   - "site:reddit.com/r/ClaudeAI new plugin extension"
   - "site:reddit.com/r/LocalLLaMA MCP server new"
+queries_websearch:
+  - "reddit ClaudeAI new MCP tool 2026"
+  - "reddit ClaudeAI new plugin extension"
+  - "reddit LocalLLaMA MCP server new"
 
 extract_fields:
   - title

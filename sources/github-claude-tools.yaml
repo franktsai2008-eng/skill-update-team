@@ -7,9 +7,12 @@ tool: firecrawl_search
 fallback: WebSearch
 schedule: daily
 
-queries:
+queries_firecrawl:
   - "claude code plugin OR extension OR skill site:github.com stars:>20 pushed:>{{7_DAYS_AGO}}"
   - "claude-code-hook OR claude-code-plugin site:github.com pushed:>{{30_DAYS_AGO}}"
+queries_websearch:
+  - "claude code plugin extension skill github new 2026"
+  - "claude-code-hook claude-code-plugin github"
 
 extract_fields:
   - name

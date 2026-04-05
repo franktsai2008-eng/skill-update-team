@@ -10,6 +10,15 @@
 技術棧：{{TECH_STACK}}
 今天日期：{{TODAY}}
 
+## 使用者 Context（用於 relevance 評分）
+
+{{USER_CONTEXT}}
+
+根據上方 context 評估每個工具的相關性：
+- current_projects 的 stack 直接相關 → relevance 加分
+- interests 匹配 → relevance 加分
+- avoid 列表匹配 → 自動降級為 Watch 並標注原因
+
 ## 使用者偏好歷史
 
 {{PREFERENCE_HISTORY}}
@@ -18,6 +27,10 @@
 
 以下是所有啟用的資料來源。每個 source 定義了搜尋查詢和特殊處理邏輯。
 依照每個 source 的 instructions 執行搜尋。
+每個 source 有兩組 queries：
+- `queries_firecrawl` — 當 firecrawl 可用時使用（支援 GitHub stars:>N 等進階語法）
+- `queries_websearch` — 當使用 WebSearch 時使用（純自然語言搜尋）
+根據可用工具選擇對應的 queries。不要把 firecrawl 格式的 query 丟給 WebSearch。
 
 {{SOURCES}}
 
@@ -57,6 +70,8 @@
 1. **功能（features）**：列出 3 個主要功能，用一句話描述每個
 2. **為什麼適合使用者（why_for_you）**：根據使用者已安裝的 MCP/skills、技術棧、偏好歷史，具體說明這個工具能幫使用者做什麼、填補什麼缺口。如果功能跟已安裝的高度重疊，直接在這裡說明
 
+3. **標籤（tags）**：為每個工具標注 3-5 個語意標籤（如 `["browser", "testing", "automation"]`）。標籤用於偏好學習，必須具體且可比對（不要用太泛的標籤如 "tool" 或 "useful"）。
+
 只有 Important (≥0.65) 以上的才會直接推薦給使用者，所以這些項目的 features 和 why_for_you 要寫清楚。
 
 ## 舊工具清理分析
@@ -75,10 +90,14 @@
 
 在輸出 JSON 中加入 `cleanup_suggestions` 欄位。
 
-## 已看過的項目（跳過或降級）
+## 掃描模式
 
-以下 URL 在之前的掃描中已出現過。如果這些工具沒有重大更新（新 major version、重要功能變更），請跳過。如果有重大更新，可以重新推薦但要在 reason 中說明「之前已掃過，這次因 XXX 重新推薦」。
+目前模式：**{{SCAN_MODE}}**
 
+- **diff 模式**：嚴格排除以下已看過的 URL，只回報全新的工具。如果已看過的工具有重大更新（新 major version、breaking change），可以重新推薦但必須在 reason 中說明「之前已掃過，這次因 XXX 重新推薦」。
+- **full 模式**：忽略已看過清單，全量搜尋所有來源。仍然去重，但不因為「之前看過」而跳過。
+
+已看過的項目：
 {{SEEN_ITEMS}}
 
 ## 可用工具
@@ -96,13 +115,32 @@
 - 無 README 或無安裝說明 → 降級一級
 - 之前被 reject 且理由相似 → 自動降級為 Watch
 
+## 資料驗證（必做）
+
+對每個 GitHub 上的 finding，你**必須**用 WebFetch 打 GitHub API 驗證數據：
+
+```
+WebFetch(url="https://api.github.com/repos/{owner}/{repo}")
+```
+
+從 API 回傳的 JSON 提取：
+- `stargazers_count` → 實際 star 數
+- `pushed_at` → 實際最後更新日期
+- `archived` → 是否已 archive
+- `fork` → 是否為 fork
+
+如果 API 呼叫失敗（403 rate limit 等），在 finding 中標記 `"verified": false`。
+如果成功驗證，標記 `"verified": true` 並使用 API 回傳的數據覆蓋你搜尋到的數據。
+如果發現 repo 已 archived，自動降級為 Watch。
+
 ## 執行步驟
 
 1. 依序執行每個 source adapter 的搜尋
-2. 對每個發現執行所有 scorer 的評分
-3. 去重（同一工具可能出現在多個 source）
-4. 排序並分級
-5. 檢查是否有 meta_discoveries
+2. 對每個 GitHub finding 用 API 驗證數據（必做）
+3. 對每個發現執行所有 scorer 的評分（使用驗證後的數據）
+4. 去重（同一工具可能出現在多個 source）
+5. 排序並分級
+6. 檢查是否有 meta_discoveries
 
 ## Scorer 權重調整建議
 
@@ -135,6 +173,8 @@
       "package": "npm 或 pip 的 package name",
       "github_stars": 1234,
       "last_commit": "2026-04-01",
+      "verified": true,
+      "tags": ["browser", "testing", "automation"],
       "overlaps_with": [],
       "overlap_percentage": 0,
       "found_in_sources": ["github-mcp", "reddit"],

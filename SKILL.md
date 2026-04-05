@@ -2,7 +2,7 @@
 name: skill-update-team
 description: >
   Skill Update Team — 自動化 AI 工具研究與安裝 Agent。
-  掃描 GitHub、Reddit、YouTube、Anthropic changelog，發現新的 MCP servers、
+  掃描 GitHub、Reddit、X/Twitter、YouTube、Anthropic changelog，發現新的 MCP servers、
   Claude Code plugins、AI 工具，經安全檢查後推薦安裝。
   Plugin 架構：sources / scorers / actions 均可獨立擴展。
   觸發方式：使用 /skill-update-team 指令觸發（如 "/skill-update-team"、"/skill-update-team approve <id>"）
@@ -29,6 +29,7 @@ description: >
 | `/skill-update-team trust <source/type>` | → 加入 auto-trust 清單 |
 | `/skill-update-team untrust <source/type>` | → 移除 auto-trust |
 | `/skill-update-team adjust-weights` | → 手動調整 scorer 權重 |
+| `/skill-update-team adopt-meta <id>` | → 採納 meta discovery，自動生成 YAML plugin |
 
 ---
 
@@ -66,6 +67,13 @@ HAS_FIRECRAWL=$(claude mcp list 2>/dev/null | grep -c "firecrawl" || echo "0")
 cat ~/skill-update-team/state/seen.json 2>/dev/null || echo "[]"
 ```
 
+用 Read 讀取 `~/skill-update-team/config.yaml`，判斷掃描模式：
+- 讀取 `scan.mode`（diff 或 full）和 `scan.last_full_scan` 日期
+- 如果 mode=diff 且距離上次 full scan ≥ `full_scan_interval` 天（或 last_full_scan 為 null），自動切換為 full scan
+- **diff 模式**：在 prompt 中指示 Research Agent 嚴格排除 seen.json 中的所有 URL，只回報新發現
+- **full 模式**：在 prompt 中指示 Research Agent 忽略 seen.json，全量搜尋
+- full scan 完成後，用 Bash 更新 config.yaml 中的 `last_full_scan` 為今天日期
+
 用 Read 讀取所有啟用的 plugin YAML：
 - `~/skill-update-team/sources/*.yaml` — 只讀 `enabled: true` 的
 - `~/skill-update-team/scorers/*.yaml` — 只讀 `enabled: true` 的
@@ -85,9 +93,11 @@ cat ~/skill-update-team/state/seen.json 2>/dev/null || echo "[]"
 - `{{TODAY}}` / `{{7_DAYS_AGO}}` / `{{30_DAYS_AGO}}` → 日期
 - `{{TECH_STACK}}` → `$TECH_STACK`
 - `{{SEEN_ITEMS}}` → seen.json content
+- `{{SCAN_MODE}}` → `"diff"` 或 `"full"`（根據上方判斷結果）
+- `{{USER_CONTEXT}}` → config.yaml 中的 `user_context` 區塊（YAML 格式）
 - `{{AVAILABLE_TOOLS}}` → 根據 HAS_FIRECRAWL 決定：
-  - If HAS_FIRECRAWL > 0: `"firecrawl_search, firecrawl_scrape, WebSearch, WebFetch"`
-  - If HAS_FIRECRAWL = 0: `"WebSearch, WebFetch（Firecrawl 不可用，請使用這兩個替代）"`
+  - If HAS_FIRECRAWL > 0: `"firecrawl_search, firecrawl_scrape, WebSearch, WebFetch。使用 queries_firecrawl。"`
+  - If HAS_FIRECRAWL = 0: `"WebSearch, WebFetch（Firecrawl 不可用）。使用 queries_websearch。"`
 
 然後用 **Agent tool** spawn Research Agent：
 
@@ -145,7 +155,7 @@ json.dump(merged, open('$HOME/skill-update-team/state/seen.json', 'w'), indent=2
 - ...
 - **總分: ...**
 
-→ `/skill-update-team check <id>` → `/skill-update-team approve <id>`
+→ `/skill-update-team approve <id>`（自動包含安全審查）
 
 ---
 
@@ -165,10 +175,27 @@ json.dump(merged, open('$HOME/skill-update-team/state/seen.json', 'w'), indent=2
 - ...
 ```
 
-### Step 4: 顯示推薦 & 清理建議
+### Step 4: 對話式精簡輸出
 
-1. 只顯示 urgency = critical 或 important 的項目（精簡版），告訴使用者可以 `/skill-update-team check <id>` 或 `/skill-update-team approve <id>`。
-2. 如果有 `cleanup_suggestions`，顯示建議清理的舊工具及原因。
+根據推薦數量動態調整輸出格式：
+
+**0 個 important+ 項目：**
+→ 只輸出一句話：「本週沒有值得安裝的新工具。」
+→ 如果有 cleanup_suggestions 或 meta_discoveries，簡短提及。
+
+**1-2 個 important+ 項目：**
+→ 每個用 2-3 行介紹（名稱、一句話描述、為什麼適合你）
+→ 直接附上 `/skill-update-team approve <id>` 指令（approve 時會自動先跑安全審查）
+→ 不需要顯示完整評分細節
+
+**3+ 個 important+ 項目：**
+→ 才顯示完整表格格式（含評分、stars、功能列表）
+→ 附上 approve 指令
+
+**所有情況都：**
+- 如果有 cleanup_suggestions，在最後簡短列出
+- 不再顯示 `/skill-update-team check <id>` 指令（approve 自動包含 audit）
+- 完整報告仍存到 report-<TODAY>.md，使用者可用 `/skill-update-team report` 查看
 
 確保目錄存在：`mkdir -p ~/skill-update-team/state ~/skill-update-team/snapshots ~/skill-update-team/logs`
 
@@ -247,9 +274,13 @@ Agent(
 
 ## APPROVE 流程
 
-### Step 1: 安全檢查
+### Step 1: 自動安全審查（必做）
 
-如果 `~/skill-update-team/state/audit-<id>-<TODAY>.json` 不存在，先執行 SECURITY AUDIT。
+**Approve 流程永遠自動包含安全審查。** 使用者不需要先手動跑 `check`。
+
+如果 `~/skill-update-team/state/audit-<id>-<TODAY>.json` 不存在，**自動執行完整 SECURITY AUDIT 流程**（spawn Security Auditor Agent，見上方 SECURITY AUDIT 流程）。
+
+如果今天已有 audit 結果，直接使用。
 
 讀取 verdict：
 - **BLOCKED** → 拒絕安裝，告訴使用者原因
@@ -278,8 +309,10 @@ echo "$SNAP_DIR" > ~/skill-update-team/state/last-snapshot.txt
 ### Step 5: 記錄偏好
 
 ```bash
-echo '{"date":"<TODAY>","id":"<id>","name":"<name>","decision":"approve","status":"installed","action_type":"<mcp-add|npm-install|pip-install|skill-install>","install_command":"<實際執行的安裝指令>","rollback_command":"<對應 action YAML 的 rollback 指令>","snapshot_dir":"<SNAP_DIR 路徑>"}' >> ~/skill-update-team/state/preferences.jsonl
+echo '{"date":"<TODAY>","id":"<id>","name":"<name>","decision":"approve","status":"installed","tags":["<tag1>","<tag2>","<tag3>"],"action_type":"<mcp-add|npm-install|pip-install|skill-install>","install_command":"<實際執行的安裝指令>","rollback_command":"<對應 action YAML 的 rollback 指令>","snapshot_dir":"<SNAP_DIR 路徑>"}' >> ~/skill-update-team/state/preferences.jsonl
 ```
+
+tags 從 research JSON 中該 finding 的 `tags` 欄位取得。
 
 如果安裝失敗，自動 rollback 並記錄 status="failed"。
 
@@ -290,8 +323,10 @@ echo '{"date":"<TODAY>","id":"<id>","name":"<name>","decision":"approve","status
 記錄偏好並告知使用者：
 
 ```bash
-echo '{"date":"<TODAY>","id":"<id>","name":"<name>","decision":"reject","reason":"<使用者給的理由>"}' >> ~/skill-update-team/state/preferences.jsonl
+echo '{"date":"<TODAY>","id":"<id>","name":"<name>","decision":"reject","tags":["<tag1>","<tag2>","<tag3>"],"reason":"<使用者給的理由>"}' >> ~/skill-update-team/state/preferences.jsonl
 ```
+
+tags 從 research JSON 中該 finding 的 `tags` 欄位取得。
 
 ---
 
@@ -375,6 +410,36 @@ Agent(
 
 顯示每個工具的健康狀態，特別標記 `recommendation="consider_removing"` 的項目。
 建議使用者對這些項目執行 `/skill-update-team rollback` 或手動移除。
+
+---
+
+## ADOPT-META 流程
+
+將 Research Agent 發現的 meta_discoveries 轉為實際的 plugin YAML。
+
+### Step 1: 找到 meta discovery
+
+從最新的 `~/skill-update-team/state/research-*.json` 中，讀取 `meta_discoveries` 陣列。
+使用者提供的 `<id>` 是陣列索引（從 0 開始）或 name 匹配。
+
+### Step 2: 根據 type 生成 YAML
+
+**type = "new-source"：**
+根據 `suggested_config` 和現有 source YAML 的格式，生成一個新的 `sources/<name>.yaml`。
+必須包含：name、description、enabled: true、queries_firecrawl、queries_websearch、instructions。
+
+**type = "new-scorer"：**
+根據 `suggested_config` 和現有 scorer YAML 的格式，生成一個新的 `scorers/<name>.yaml`。
+必須包含：name、description、weight、enabled: true、scoring_rules。
+注意：新 scorer 的 weight 加上後，所有 scorer weights 總和不應超過 1.2。如果超過，提醒使用者用 `adjust-weights` 重新平衡。
+
+**type = "new-action"：**
+根據 `suggested_config` 和現有 action YAML 的格式，生成一個新的 `actions/<name>.yaml`。
+
+### Step 3: 確認並儲存
+
+用 Write tool 寫入對應目錄。顯示生成的 YAML 內容讓使用者確認。
+告知使用者下次 scan 會自動包含新的 plugin。
 
 ---
 

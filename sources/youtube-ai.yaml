@@ -7,9 +7,12 @@ tool: firecrawl_search
 fallback: WebSearch
 schedule: weekly  # YouTube 內容更新較慢，每週一次即可
 
-queries:
+queries_firecrawl:
   - "Claude Code MCP server tutorial site:youtube.com"
   - "Claude Code new tools 2026 site:youtube.com"
+queries_websearch:
+  - "Claude Code MCP server tutorial youtube 2026"
+  - "Claude Code new tools youtube 2026"
 
 extract_fields:
   - title

@@ -7,9 +7,12 @@ tool: firecrawl_search
 fallback: WebSearch
 schedule: daily
 
-queries:
+queries_firecrawl:
   - "MCP server site:github.com stars:>50 pushed:>{{7_DAYS_AGO}}"
   - "modelcontextprotocol server site:github.com stars:>30 pushed:>{{7_DAYS_AGO}}"
+queries_websearch:
+  - "new MCP server github 2026"
+  - "modelcontextprotocol server github new release"
 
 extract_fields:
   - name

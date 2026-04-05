@@ -6,12 +6,16 @@ weight: 0.10
 enabled: true
 
 scoring_rules: |
-  根據使用者過去的 approve/reject 記錄調整分數（0-1）：
-  - 與過去 approve 的工具類型相似: 0.8
-  - 無歷史參考: 0.5（中立）
-  - 與過去 reject 的工具類型相似: 0.2
-  - 使用者明確 reject 過類似功能: 0.1
+  根據使用者過去的 approve/reject 記錄，透過 **tags 比對** 調整分數（0-1）：
 
-  偏好歷史會從 preferences.jsonl 注入。
-  注意：如果使用者最近開始 approve 一個之前 reject 的類別，
-  代表偏好在變化，應該適度提高該類別的分數。
+  每筆偏好記錄都有 tags 欄位（如 ["browser", "testing", "automation"]）。
+  計算新工具的 tags 與歷史記錄的重疊度：
+
+  - tags 與過去 approve 的工具重疊 ≥ 2 個: 0.9
+  - tags 與過去 approve 的工具重疊 1 個: 0.7
+  - 無歷史參考（沒有 tags 匹配）: 0.5（中立）
+  - tags 與過去 reject 的工具重疊 1 個: 0.3
+  - tags 與過去 reject 的工具重疊 ≥ 2 個: 0.1
+
+  偏好歷史會從 preferences.jsonl 注入，每筆含 tags 欄位。
+  注意：最近 30 天的記錄權重 > 更早的記錄（偏好會變化）。
