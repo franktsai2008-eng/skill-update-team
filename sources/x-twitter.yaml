@@ -1,0 +1,37 @@
+# Source Adapter: X (Twitter) AI Communities
+---
+name: x-twitter
+description: 從 X/Twitter 搜尋 Claude Code / MCP 工具討論和發佈
+enabled: true
+tool: firecrawl_search
+fallback: WebSearch
+schedule: daily
+
+queries:
+  - "site:x.com Claude Code MCP server new"
+  - "site:x.com claude-code plugin OR extension OR skill"
+  - "site:x.com modelcontextprotocol new tool"
+  - "site:x.com \"claude code\" hook OR agent OR skill"
+
+extract_fields:
+  - author
+  - url
+  - text
+  - likes
+  - retweets
+  - mentioned_tools
+  - github_urls
+
+instructions: |
+  從 X/Twitter 搜尋 Claude Code / MCP 相關的工具發佈和討論。
+  重點關注：
+  - 工具作者的發佈推文（通常附帶 GitHub URL）
+  - 高互動推文（likes > 50 或 retweets > 20）
+  - Anthropic 官方帳號 (@AnthropicAI) 的工具相關推文
+  - 知名 AI 開發者的推薦（如 @swyx, @simonw 等）
+  忽略：
+  - 純意見帖（沒有具體工具名稱或 URL）
+  - 廣告 / spam
+  - 轉推無附加內容的帖子
+  如果推文提到 GitHub repo，提取 URL 作為工具來源。
+  X 上的工具發佈通常比 Reddit 更快，適合抓第一手資訊。

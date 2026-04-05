@@ -45,9 +45,10 @@ This keeps your main conversation clean while the subagents do the expensive wor
 
 ```bash
 git clone https://github.com/franktsai2008-eng/skill-update-team.git ~/skill-update-team
+cd ~/skill-update-team && chmod +x install.sh && ./install.sh
 ```
 
-Then add the skill to Claude Code. The `SKILL.md` in this repo is the skill entry point — Claude Code will pick it up from `~/skill-update-team/`.
+The install script creates `~/.claude/skills/` and symlinks this repo into it. Restart Claude Code after installation.
 
 ### 3. Use
 
