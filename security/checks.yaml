@@ -40,13 +40,23 @@ checks:
 
   - id: dependency-audit
     name: Dependency 安全審查
-    description: 檢查依賴鏈是否安全
+    description: 實際執行 npm audit / pip-audit，不是靜態猜測
     rules: |
-      - npm 套件無 known vulnerability（npm audit）
-      - pip 套件無 known CVE
+      - 執行 `npm audit --json` 或 `pip-audit`，無 high/critical CVE
       - 依賴數量合理（< 200 直接依賴視為警告）
       - 無 typosquatting 嫌疑（名稱與知名套件過於相似）
     severity: warn
+
+  - id: dynamic-sandbox
+    name: 動態沙箱行為驗證
+    description: 在隔離 temp dir 實際安裝並執行，觀察真實行為是否符合宣告
+    rules: |
+      - 安裝過程中無未預期的對外網路連線（lsof 比對安裝前後）
+      - 實際取得的 MCP tool schema 與 README/宣告一致（無隱藏工具）
+      - 安裝後無新增常駐 process（ps 比對前後）
+      - 測試呼叫後無存取宣告範圍外的路徑（fs_usage 或 strace）
+      - 安裝結束後 temp dir 以外無殘留檔案寫入
+    severity: block
 
   - id: data-exfil
     name: 資料外洩風險

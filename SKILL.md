@@ -249,6 +249,8 @@ json.dump(merged, open('$HOME/skill-update-team/state/seen.json', 'w'), indent=2
 - `{{INSTALL_COMMAND}}` → finding.install_command
 - `{{SECURITY_CHECKS}}` → checks.yaml 內容
 - `{{TODAY}}` → 今天日期
+- `{{NPM_PACKAGE}}` → 從 install_command 中提取的 npm 套件名稱（如 `@modelcontextprotocol/server-xxx`），若非 npm 套件則留空
+- `{{PIP_PACKAGE}}` → 從 install_command 中提取的 pip 套件名稱，若非 pip 套件則留空
 
 ### Step 3: Spawn Security Auditor Agent
 
